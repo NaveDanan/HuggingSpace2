@@ -1,0 +1,82 @@
+# Step 1: Use the official PostgreSQL 16 image as the base
+FROM postgres:16
+
+# Step 2: Install necessary build tools and dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    git \
+    curl \
+    libreadline-dev \
+    zlib1g-dev \
+    pkg-config \
+    cmake \
+    libsodium-dev \
+    postgresql-server-dev-16 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Step 3: Install Rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile minimal --default-toolchain nightly \
+    && echo 'export PATH=$HOME/.cargo/bin:$PATH' >> ~/.bashrc \
+    && . ~/.bashrc \
+    && rustup --version \
+    && rustc --version \
+    && cargo --version
+
+# Step 4: Install the matching version of cargo-pgrx
+RUN . ~/.bashrc \
+    && cargo install --locked cargo-pgrx --version 0.12.6
+
+# Step 5: Initialize pgrx for PostgreSQL 16
+RUN . ~/.bashrc \
+    && cargo pgrx init --pg16 $(which pg_config)
+
+# Step 13: Add POSTGRES_PORT environment variable
+ENV POSTGRES_PORT=5532
+
+# Step 14: Set PostgreSQL to listen on the configured port
+CMD ["postgres", "-c", "port=$POSTGRES_PORT"]
+
+# Step 6: Clone and install pgsodium
+RUN git clone https://github.com/michelp/pgsodium.git \
+    && cd pgsodium \
+    && make \
+    && make install \
+    && cd .. \
+    && rm -rf pgsodium
+
+# Step 7: Clone and install pgjwt
+RUN git clone https://github.com/michelp/pgjwt.git \
+    && cd pgjwt \
+    && make \
+    && make install \
+    && cd .. \
+    && rm -rf pgjwt
+
+# Step 8: Clone and install pg_graphql
+RUN git clone https://github.com/supabase/pg_graphql.git \
+    && cd pg_graphql \
+    && . ~/.bashrc \
+    && cargo pgrx install --release \
+    && cd .. \
+    && rm -rf pg_graphql
+
+# Step 9: Clone and install supabase_vault
+RUN git clone https://github.com/supabase/vault.git \
+    && cd vault \
+    && make \
+    && make install \
+    && cd .. \
+    && rm -rf vault
+
+# Step 10: Copy initialization scripts
+COPY init-extensions.sql /db-schema/
+COPY schema.sql /db-schema/
+
+# Step 11: (Optional) Clean up build dependencies to reduce image size
+RUN apt-get purge -y --auto-remove build-essential git curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Step 12: Ensure Rust binaries are in the PATH
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+

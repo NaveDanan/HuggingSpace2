@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  db:
+    build: .
+    container_name: my-postgres
+    environment:
+      POSTGRES_PASSWORD: yourpassword
+      POSTGRES_DB: yourdatabase
+      POSTGRES_USER: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  frontend:
+    image: your-frontend-image
+    container_name: my-frontend
+    environment:
+      DATABASE_URL: postgres://postgres:yourpassword@db:5432/yourdatabase
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  pgdata:

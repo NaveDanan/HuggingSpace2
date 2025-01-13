@@ -1,0 +1,27 @@
+# Core
+Django
+djangorestframework
+django-cors-headers
+django-environ
+psycopg2-binary
+dj-database-url
+
+# Authentication
+djangorestframework-simplejwt
+django-guardian
+
+# API Documentation
+drf-spectacular
+
+# Database
+supabase-py
+python-jose
+
+# Testing
+pytest
+pytest-django
+pytest-cov
+
+# Utils
+python-dotenv
+requests
